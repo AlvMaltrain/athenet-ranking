@@ -11,6 +11,10 @@ public record RankingHistoricoResponse(
         Integer puntosContra,
         Integer diferencia,
         Integer pts,
-        Integer posicion
+        Integer posicion,
+        // Null si el equipo todavia no tiene ningun resultado procesado en este deporte
+        // (no deberia pasar si ya tiene una fila en el ranking historico, pero se deja
+        // nullable por si acaso).
+        UltimoEncuentroResponse ultimoEncuentro
 ) {
 }

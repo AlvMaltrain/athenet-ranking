@@ -1,5 +1,7 @@
 package com.athenet.ranking.model;
 
+import java.time.LocalDate;
+
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -77,4 +79,11 @@ public class ResultadoProcesado {
 
     @Schema(description = "Puntos otorgados por una derrota")
     private Integer puntosDerrota;
+
+    // Nullable: columna agregada en V2, y el campo en el mensaje tampoco es obligatorio
+    // todavia (ver ResultadoRegistradoMessage.matchDate). Mientras no llegue, el "ultimo
+    // encuentro" se aproxima por partidoId.
+    @Column(name = "fecha_partido")
+    @Schema(description = "Fecha en que se jugó el partido (no la fecha en que se publicó el evento)")
+    private LocalDate fechaPartido;
 }

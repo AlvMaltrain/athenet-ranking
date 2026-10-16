@@ -7,6 +7,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.athenet.ranking.dto.response.RankingHistoricoResponse;
+import com.athenet.ranking.dto.response.UltimoEncuentroResponse;
 import com.athenet.ranking.mapper.RankingHistoricoMapper;
 import com.athenet.ranking.model.RankingHistorico;
 import com.athenet.ranking.model.ResultadoProcesado;
@@ -31,13 +32,36 @@ public class RankingHistoricoService {
     private final RankingHistoricoMapper rankingHistoricoMapper;
 
     /**
-     * Devuelve el ranking histórico de un deporte, ya ordenado.
+     * Devuelve el ranking histórico de un deporte, ya ordenado, con el
+     * ultimo encuentro de cada equipo.
      */
     @Transactional(readOnly = true)
     public List<RankingHistoricoResponse> obtenerRanking(Long deporteId) {
         return rankingHistoricoRepository.findByDeporteIdOrderByPosicionAsc(deporteId).stream()
-                .map(rankingHistoricoMapper::toResponse)
+                .map(fila -> rankingHistoricoMapper.toResponse(fila, obtenerUltimoEncuentro(deporteId, fila.getEquipoId())))
                 .toList();
+    }
+
+    // Mas reciente primero (ver ResultadoProcesadoRepository); null si el equipo no tiene
+    // ningun resultado procesado todavia en este deporte.
+    private UltimoEncuentroResponse obtenerUltimoEncuentro(Long deporteId, Long equipoId) {
+        return resultadoProcesadoRepository.findByDeporteIdAndEquipoOrdenadoPorFechaDesc(deporteId, equipoId).stream()
+                .findFirst()
+                .map(this::toUltimoEncuentroResponse)
+                .orElse(null);
+    }
+
+    private UltimoEncuentroResponse toUltimoEncuentroResponse(ResultadoProcesado r) {
+        return new UltimoEncuentroResponse(
+                r.getCompetenciaId(),
+                r.getEquipoLocalId(),
+                r.getInstitucionLocalId(),
+                r.getEquipoVisitaId(),
+                r.getInstitucionVisitaId(),
+                r.getPuntajeLocal(),
+                r.getPuntajeVisita(),
+                r.getFechaPartido()
+        );
     }
 
     public void actualizar(ResultadoProcesado resultado) {
