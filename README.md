@@ -11,11 +11,16 @@ Es una proyección de solo lectura (CQRS ligero): no recibe resultados por REST 
 
 - Java 21
 - Spring Boot 4.1.1
-- Spring Data JPA + PostgreSQL
-- Spring AMQP (RabbitMQ)
+- Spring Data JPA + PostgreSQL (esquema versionado con Flyway)
+- Spring AMQP (RabbitMQ), con retry + dead-letter queue
 - Bean Validation
+- Spring Boot Actuator (`/actuator/health`)
 - Lombok
 
 ## Puerto
 
 `8083`
+
+## Despliegue
+
+Ver [DEPLOY.md](./DEPLOY.md): Docker, variables de entorno (`.env`), Flyway y cómo correr los tests.
