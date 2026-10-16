@@ -3,6 +3,8 @@ package com.athenet.ranking.service;
 import java.util.Comparator;
 import java.util.List;
 
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -27,6 +29,9 @@ import lombok.RequiredArgsConstructor;
 @Transactional
 public class RankingHistoricoService {
 
+    // Solo se necesita el ultimo partido de cada equipo: se pide una fila, no todo su historial
+    private static final Pageable SOLO_EL_ULTIMO = PageRequest.of(0, 1);
+
     private final ResultadoProcesadoRepository resultadoProcesadoRepository;
     private final RankingHistoricoRepository rankingHistoricoRepository;
     private final RankingHistoricoMapper rankingHistoricoMapper;
@@ -45,7 +50,7 @@ public class RankingHistoricoService {
     // Mas reciente primero (ver ResultadoProcesadoRepository); null si el equipo no tiene
     // ningun resultado procesado todavia en este deporte.
     private UltimoEncuentroResponse obtenerUltimoEncuentro(Long deporteId, Long equipoId) {
-        return resultadoProcesadoRepository.findByDeporteIdAndEquipoOrdenadoPorFechaDesc(deporteId, equipoId).stream()
+        return resultadoProcesadoRepository.findByDeporteIdAndEquipoOrdenadoPorFechaDesc(deporteId, equipoId, SOLO_EL_ULTIMO).stream()
                 .findFirst()
                 .map(this::toUltimoEncuentroResponse)
                 .orElse(null);
