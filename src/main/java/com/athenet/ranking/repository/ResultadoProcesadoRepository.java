@@ -2,6 +2,7 @@ package com.athenet.ranking.repository;
 
 import java.util.List;
 
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -21,8 +22,10 @@ public interface ResultadoProcesadoRepository extends JpaRepository<ResultadoPro
     // el "ultimo encuentro" en el ranking historico). fechaPartido puede ser null en filas
     // viejas o mientras Competencia no la envie; NULLS LAST evita que esas tapen un partido
     // mas reciente que si tenga fecha, y partidoId desc queda como desempate razonable.
+    // Recibe Pageable para que la base devuelva solo las filas pedidas (el ultimo encuentro
+    // necesita una): usar PageRequest.of(0, 1).
     @Query("SELECT r FROM ResultadoProcesado r WHERE r.deporteId = :deporteId "
             + "AND (r.equipoLocalId = :equipoId OR r.equipoVisitaId = :equipoId) "
             + "ORDER BY r.fechaPartido DESC NULLS LAST, r.partidoId DESC")
-    List<ResultadoProcesado> findByDeporteIdAndEquipoOrdenadoPorFechaDesc(@Param("deporteId") Long deporteId, @Param("equipoId") Long equipoId);
+    List<ResultadoProcesado> findByDeporteIdAndEquipoOrdenadoPorFechaDesc(@Param("deporteId") Long deporteId, @Param("equipoId") Long equipoId, Pageable pageable);
 }

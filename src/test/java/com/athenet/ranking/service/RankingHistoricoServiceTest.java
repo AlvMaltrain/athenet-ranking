@@ -2,10 +2,12 @@ package com.athenet.ranking.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
@@ -15,6 +17,9 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Pageable;
+
+import com.athenet.ranking.dto.response.UltimoEncuentroResponse;
 
 import com.athenet.ranking.mapper.RankingHistoricoMapper;
 import com.athenet.ranking.model.RankingHistorico;
@@ -128,6 +133,68 @@ class RankingHistoricoServiceTest {
         assertThat(ordenado.get(0).getPosicion()).isEqualTo(1);
         assertThat(ordenado.get(1).getPosicion()).isEqualTo(2);
         assertThat(ordenado.get(2).getPosicion()).isEqualTo(3);
+    }
+
+    @Test
+    void obtenerRanking_armaElUltimoEncuentroDeCadaEquipo() {
+        Long deporteId = 5L;
+        RankingHistorico equipoA = RankingHistorico.builder().deporteId(deporteId).equipoId(10L).institucionId(1L).posicion(1).build();
+        ResultadoProcesado partido = ResultadoProcesado.builder()
+                .partidoId(7L).competenciaId(3L).deporteId(deporteId).version(1)
+                .equipoLocalId(20L).equipoVisitaId(10L)
+                .institucionLocalId(2L).institucionVisitaId(1L)
+                .puntajeLocal(1).puntajeVisita(4)
+                .fechaPartido(LocalDate.of(2026, 10, 10))
+                .build();
+
+        when(rankingHistoricoRepository.findByDeporteIdOrderByPosicionAsc(deporteId)).thenReturn(List.of(equipoA));
+        when(resultadoProcesadoRepository.findByDeporteIdAndEquipoOrdenadoPorFechaDesc(eq(deporteId), eq(10L), any(Pageable.class)))
+                .thenReturn(List.of(partido));
+
+        service.obtenerRanking(deporteId);
+
+        ArgumentCaptor<UltimoEncuentroResponse> captor = ArgumentCaptor.forClass(UltimoEncuentroResponse.class);
+        verify(rankingHistoricoMapper).toResponse(eq(equipoA), captor.capture());
+        UltimoEncuentroResponse ultimo = captor.getValue();
+        assertThat(ultimo.competenciaId()).isEqualTo(3L);
+        assertThat(ultimo.equipoLocalId()).isEqualTo(20L);
+        assertThat(ultimo.institucionLocalId()).isEqualTo(2L);
+        assertThat(ultimo.equipoVisitaId()).isEqualTo(10L);
+        assertThat(ultimo.institucionVisitaId()).isEqualTo(1L);
+        assertThat(ultimo.puntajeLocal()).isEqualTo(1);
+        assertThat(ultimo.puntajeVisita()).isEqualTo(4);
+        assertThat(ultimo.fecha()).isEqualTo(LocalDate.of(2026, 10, 10));
+    }
+
+    @Test
+    void obtenerRanking_ultimoEncuentroEsNullSiElEquipoNoTienePartidos() {
+        Long deporteId = 5L;
+        RankingHistorico equipoA = RankingHistorico.builder().deporteId(deporteId).equipoId(10L).institucionId(1L).posicion(1).build();
+
+        when(rankingHistoricoRepository.findByDeporteIdOrderByPosicionAsc(deporteId)).thenReturn(List.of(equipoA));
+        when(resultadoProcesadoRepository.findByDeporteIdAndEquipoOrdenadoPorFechaDesc(eq(deporteId), eq(10L), any(Pageable.class)))
+                .thenReturn(List.of());
+
+        service.obtenerRanking(deporteId);
+
+        verify(rankingHistoricoMapper).toResponse(equipoA, null);
+    }
+
+    @Test
+    void obtenerRanking_pideSoloUnaFilaPorEquipoParaElUltimoEncuentro() {
+        Long deporteId = 5L;
+        RankingHistorico equipoA = RankingHistorico.builder().deporteId(deporteId).equipoId(10L).institucionId(1L).posicion(1).build();
+
+        when(rankingHistoricoRepository.findByDeporteIdOrderByPosicionAsc(deporteId)).thenReturn(List.of(equipoA));
+        when(resultadoProcesadoRepository.findByDeporteIdAndEquipoOrdenadoPorFechaDesc(eq(deporteId), eq(10L), any(Pageable.class)))
+                .thenReturn(List.of());
+
+        service.obtenerRanking(deporteId);
+
+        ArgumentCaptor<Pageable> pagina = ArgumentCaptor.forClass(Pageable.class);
+        verify(resultadoProcesadoRepository).findByDeporteIdAndEquipoOrdenadoPorFechaDesc(eq(deporteId), eq(10L), pagina.capture());
+        assertThat(pagina.getValue().getPageNumber()).isEqualTo(0);
+        assertThat(pagina.getValue().getPageSize()).isEqualTo(1);
     }
 
     private RankingHistorico buscar(List<RankingHistorico> filas, Long equipoId) {
