@@ -3,12 +3,13 @@ package com.athenet.ranking.mapper;
 import org.springframework.stereotype.Component;
 
 import com.athenet.ranking.dto.response.RankingHistoricoResponse;
+import com.athenet.ranking.dto.response.UltimoEncuentroResponse;
 import com.athenet.ranking.model.RankingHistorico;
 
 @Component
 public class RankingHistoricoMapper {
 
-    public RankingHistoricoResponse toResponse(RankingHistorico fila) {
+    public RankingHistoricoResponse toResponse(RankingHistorico fila, UltimoEncuentroResponse ultimoEncuentro) {
         return new RankingHistoricoResponse(
                 fila.getEquipoId(),
                 fila.getInstitucionId(),
@@ -20,7 +21,8 @@ public class RankingHistoricoMapper {
                 fila.getPuntosContra(),
                 fila.getDiferencia(),
                 fila.getPts(),
-                fila.getPosicion()
+                fila.getPosicion(),
+                ultimoEncuentro
         );
     }
 }

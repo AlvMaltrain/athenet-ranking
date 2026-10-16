@@ -16,4 +16,13 @@ public interface ResultadoProcesadoRepository extends JpaRepository<ResultadoPro
     @Query("SELECT r FROM ResultadoProcesado r WHERE r.deporteId = :deporteId "
             + "AND (r.equipoLocalId = :equipoId OR r.equipoVisitaId = :equipoId)")
     List<ResultadoProcesado> findByDeporteIdAndEquipo(@Param("deporteId") Long deporteId, @Param("equipoId") Long equipoId);
+
+    // Mismo filtro que el de arriba, pero ordenado del mas reciente al mas antiguo (para
+    // el "ultimo encuentro" en el ranking historico). fechaPartido puede ser null en filas
+    // viejas o mientras Competencia no la envie; NULLS LAST evita que esas tapen un partido
+    // mas reciente que si tenga fecha, y partidoId desc queda como desempate razonable.
+    @Query("SELECT r FROM ResultadoProcesado r WHERE r.deporteId = :deporteId "
+            + "AND (r.equipoLocalId = :equipoId OR r.equipoVisitaId = :equipoId) "
+            + "ORDER BY r.fechaPartido DESC NULLS LAST, r.partidoId DESC")
+    List<ResultadoProcesado> findByDeporteIdAndEquipoOrdenadoPorFechaDesc(@Param("deporteId") Long deporteId, @Param("equipoId") Long equipoId);
 }

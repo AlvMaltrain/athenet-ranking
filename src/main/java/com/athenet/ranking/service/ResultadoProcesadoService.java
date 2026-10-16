@@ -54,6 +54,7 @@ public class ResultadoProcesadoService {
                 .puntosVictoria(m.points().win())
                 .puntosEmpate(m.points().draw())
                 .puntosDerrota(m.points().loss())
+                .fechaPartido(m.matchDate())
                 .build();
     }
 }
