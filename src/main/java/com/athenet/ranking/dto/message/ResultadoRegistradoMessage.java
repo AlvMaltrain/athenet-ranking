@@ -1,10 +1,13 @@
 package com.athenet.ranking.dto.message;
 
 import java.time.LocalDate;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.PositiveOrZero;
+import jakarta.validation.constraints.Positive;
+import jakarta.validation.constraints.Min;
 
 /**
  * Payload de datos del evento `resultado.registrado` publicado por MS-Competencia
@@ -12,16 +15,17 @@ import jakarta.validation.constraints.PositiveOrZero;
  * solo cubren lo que rompería los cálculos de ranking (NPE al desempaquetar un campo
  * nulo, etc.), no la lógica de negocio de Competencia.
  */
+@JsonIgnoreProperties(ignoreUnknown = true)
 public record ResultadoRegistradoMessage(
-        @NotNull Long matchId,
-        @NotNull Long competitionId,
-        @NotNull Long sportId,
+        @NotNull @Positive Long matchId,
+        @NotNull @Positive Long competitionId,
+        @NotNull @Positive Long sportId,
         Long eventId,
-        int version,
-        @NotNull Long homeTeamId,
-        @NotNull Long awayTeamId,
-        @NotNull Long homeInstitutionId,
-        @NotNull Long awayInstitutionId,
+        @Min(1) int version,
+        @NotNull @Positive Long homeTeamId,
+        @NotNull @Positive Long awayTeamId,
+        @NotNull @Positive Long homeInstitutionId,
+        @NotNull @Positive Long awayInstitutionId,
         @NotNull @PositiveOrZero Integer homeScore,
         @NotNull @PositiveOrZero Integer awayScore,
         boolean simulated,
@@ -31,10 +35,11 @@ public record ResultadoRegistradoMessage(
         // igual, solo que sin fecha para ordenar el "ultimo encuentro".
         LocalDate matchDate
 ) {
+    @JsonIgnoreProperties(ignoreUnknown = true)
     public record Points(
-            @PositiveOrZero int win,
-            @PositiveOrZero int draw,
-            @PositiveOrZero int loss
+            @NotNull @PositiveOrZero Integer win,
+            @NotNull @PositiveOrZero Integer draw,
+            @NotNull @PositiveOrZero Integer loss
     ) {
     }
 }

@@ -45,6 +45,10 @@ public class RabbitConfig {
     @Value("${athenet.messaging.resultado-registrado.dlq}")
     private String dlqName;
 
+    // Vacío conserva la topología existente. Activar solo tras migrar/verificar la cola del broker.
+    @Value("${athenet.messaging.resultado-registrado.dead-letter-routing-key:}")
+    private String deadLetterRoutingKey;
+
     @Bean
     public TopicExchange resultadoRegistradoExchange() {
         return new TopicExchange(exchangeName, true, false);
@@ -60,7 +64,10 @@ public class RabbitConfig {
     @Bean
     public Queue resultadoRegistradoQueue() {
         return new Queue(queueName, true, false, false,
-                Map.of("x-dead-letter-exchange", deadLetterExchangeName));
+                deadLetterRoutingKey == null || deadLetterRoutingKey.isBlank()
+                    ? Map.of("x-dead-letter-exchange", deadLetterExchangeName)
+                    : Map.of("x-dead-letter-exchange", deadLetterExchangeName,
+                            "x-dead-letter-routing-key", deadLetterRoutingKey));
     }
 
     @Bean
@@ -75,7 +82,8 @@ public class RabbitConfig {
 
     @Bean
     public Binding resultadoRegistradoDlqBinding(Queue resultadoRegistradoDlq, TopicExchange deadLetterExchange) {
-        return BindingBuilder.bind(resultadoRegistradoDlq).to(deadLetterExchange).with(routingKey);
+        return BindingBuilder.bind(resultadoRegistradoDlq).to(deadLetterExchange)
+                .with(deadLetterRoutingKey == null || deadLetterRoutingKey.isBlank() ? routingKey : deadLetterRoutingKey);
     }
 
     // 3 reintentos con backoff exponencial (1s, 2s, 4s) antes de rechazar el mensaje sin
