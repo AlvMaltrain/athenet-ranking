@@ -39,7 +39,7 @@ services:
     # "image" es lo que se usa con `docker compose pull` (ej. en un servidor,
     # con la imagen publicada por un pipeline de CI/CD). "build" es lo que se
     # usa en local con `docker compose up --build`.
-    image: ${IMAGE:-ghcr.io/alvmaltrain/api-athenet-ranking:latest}
+    image: ${IMAGE:-ghcr.io/alvmaltrain/athenet-ranking:latest}
     build:
       context: .
       dockerfile: Dockerfile
