@@ -116,7 +116,7 @@ sudo chown $USER:$USER /opt/athenet-ranking
 ```
 
 Desde tu maquina, copia el compose de produccion **con el nombre `docker-compose.yml`**
-(no incluye RabbitMQ local ni publica el puerto de la base):
+(sin RabbitMQ ni Postgres locales: usa el broker compartido y la RDS):
 
 ```bash
 scp -i tu-clave.pem docker-compose.prod.yml ec2-user@<IP-EC2>:/opt/athenet-ranking/docker-compose.yml
@@ -128,9 +128,10 @@ solo actualiza la imagen, no este archivo).
 En la EC2 crea `/opt/athenet-ranking/.env` (no se sube a git):
 
 ```env
-DB_NAME=ranking_db
-DB_USERNAME=postgres
-DB_PASSWORD=<clave-nueva-y-segura>
+# Base en RDS. sslmode=require cifra la conexion (la RDS puede exigir SSL).
+DB_URL=jdbc:postgresql://<endpoint-rds>:5432/ranking_db?sslmode=require
+DB_USERNAME=ranking_user
+DB_PASSWORD=<clave-del-usuario-de-la-rds>
 
 RABBITMQ_HOST=<host-del-broker>
 RABBITMQ_PORT=5672
@@ -145,7 +146,9 @@ CORS_ALLOWED_ORIGINS=https://fabetabilo.github.io
 IMAGE=ghcr.io/alvmaltrain/athenet-ranking:latest
 ```
 
-Security Group de la instancia: abrir TCP 8083 (entrada) y SSH 22 solo desde tu IP.
+Security Group de la instancia: abrir TCP 8083 (entrada) y SSH 22 desde cualquier IP
+(`0.0.0.0/0`). Los runners de GitHub Actions no tienen IP fija, asi que el despliegue por SSH
+no funcionaria con la regla limitada a una IP; el acceso queda protegido solo por la clave `.pem`.
 
 Primer arranque: no hace falta hacerlo a mano. Con la EC2 preparada (Docker, compose, `.env`,
 Security Group) y los 3 secrets creados, el primer push a `main` publica la imagen y el job
@@ -156,4 +159,40 @@ cd /opt/athenet-ranking
 docker compose ps
 docker compose logs -f app
 curl http://localhost:8083/actuator/health    # debe responder {"status":"UP"}
+```
+
+## Base de datos (RDS)
+
+Ranking usa una base `ranking_db` en una RDS que vive en otra cuenta de AWS, por lo que la
+conexion va por el endpoint publico. Requisitos del lado de la RDS (los configura quien la administra):
+
+- **Publicly accessible = Yes**.
+- Security Group de la RDS: entrada PostgreSQL (5432) solo desde la IP elastica de la EC2
+  de ranking (`<IP-EC2>/32`). Nunca `0.0.0.0/0`.
+- Base y usuario propios (el usuario es dueño de la base, para que Flyway pueda crear las tablas):
+
+```sql
+CREATE USER ranking_user WITH PASSWORD '<clave-segura>';
+CREATE DATABASE ranking_db OWNER ranking_user;
+```
+
+Flyway aplica V1 y V2 al primer arranque sobre la base vacia. Si cambia la IP de la EC2,
+hay que actualizar la regla del Security Group de la RDS.
+
+### Pasar de la base local (contenedor) a la RDS
+
+Con la EC2 ya desplegada con el compose anterior (que incluia Postgres):
+
+```bash
+cd /opt/athenet-ranking
+docker compose down -v        # detiene app y base local y borra su volumen
+```
+
+Luego copiar el compose nuevo con `scp`, reemplazar `DB_URL`, `DB_USERNAME` y `DB_PASSWORD` en
+el `.env`, y levantar:
+
+```bash
+docker compose up -d
+docker compose logs -f app    # Flyway debe crear las tablas en la RDS
+curl http://localhost:8083/actuator/health
 ```

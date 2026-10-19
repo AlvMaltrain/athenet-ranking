@@ -1,34 +1,15 @@
 # Compose de produccion (EC2). En el servidor se copia como "docker-compose.yml".
-# Sin RabbitMQ local: la app se conecta al broker compartido (RABBITMQ_HOST).
-# La base no publica puertos al host: solo la app la alcanza dentro de la red de Docker.
+# Sin RabbitMQ ni Postgres locales: la app usa el broker compartido (RABBITMQ_*)
+# y la base en RDS (DB_URL).
 services:
-  db:
-    image: postgres:16-alpine
-    container_name: athenet-ranking-db
-    restart: unless-stopped
-    environment:
-      POSTGRES_DB: ${DB_NAME:-ranking_db}
-      POSTGRES_USER: ${DB_USERNAME:-postgres}
-      POSTGRES_PASSWORD: ${DB_PASSWORD:?definir DB_PASSWORD en .env}
-    volumes:
-      - ranking_db_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-postgres}"]
-      interval: 5s
-      timeout: 5s
-      retries: 10
-
   app:
     image: ${IMAGE:-ghcr.io/alvmaltrain/athenet-ranking:latest}
     container_name: athenet-ranking-app
     restart: unless-stopped
-    depends_on:
-      db:
-        condition: service_healthy
     environment:
-      DB_URL: jdbc:postgresql://db:5432/${DB_NAME:-ranking_db}
-      DB_USERNAME: ${DB_USERNAME:-postgres}
-      DB_PASSWORD: ${DB_PASSWORD}
+      DB_URL: ${DB_URL:?definir DB_URL en .env}
+      DB_USERNAME: ${DB_USERNAME:?definir DB_USERNAME en .env}
+      DB_PASSWORD: ${DB_PASSWORD:?definir DB_PASSWORD en .env}
       RABBITMQ_HOST: ${RABBITMQ_HOST:?definir RABBITMQ_HOST en .env}
       RABBITMQ_PORT: ${RABBITMQ_PORT:-5672}
       RABBITMQ_USER: ${RABBITMQ_USER:?definir RABBITMQ_USER en .env}
@@ -40,6 +21,3 @@ services:
       LOG_LEVEL_RANKING: ${LOG_LEVEL_RANKING:-INFO}
     ports:
       - "8083:8083"
-
-volumes:
-  ranking_db_data:
