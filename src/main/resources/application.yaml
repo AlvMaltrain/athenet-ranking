@@ -26,6 +26,7 @@ spring:
     enabled: true
 
   rabbitmq:
+    virtual-host: ${RABBITMQ_VHOST:/}
     host: ${RABBITMQ_HOST:localhost}
     port: ${RABBITMQ_PORT:5672}
     username: ${RABBITMQ_USER:guest}
@@ -48,6 +49,7 @@ athenet:
       # igual que en Competencia.
       dead-letter-exchange: ${DEAD_LETTER_EXCHANGE:athenet.dlx}
       dlq: ${RESULTADO_REGISTRADO_DLQ:ranking.resultado.registrado.queue.dlq}
+      dead-letter-routing-key: ${RANKING_DLX_ROUTING_KEY:}
 
 management:
   endpoints:

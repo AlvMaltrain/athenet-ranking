@@ -1,6 +1,8 @@
 package com.athenet.ranking.listener;
 
 import java.io.IOException;
+import java.time.Instant;
+import java.time.format.DateTimeParseException;
 import java.util.Set;
 
 import org.slf4j.Logger;
@@ -39,14 +41,31 @@ public class ResultadoRegistradoListener {
     }
 
     @RabbitListener(queues = "${athenet.messaging.resultado-registrado.queue}", containerFactory = "rabbitListenerContainerFactory")
-    public void escuchar(Message message) throws IOException {
-        ResultadoRegistradoEnvelope envelope = rabbitObjectMapper.readValue(message.getBody(), ResultadoRegistradoEnvelope.class);
+    public void escuchar(Message message) {
+        ResultadoRegistradoEnvelope envelope = leer(message);
+        if (envelope == null || !validator.validate(envelope).isEmpty()) {
+            throw new IllegalArgumentException("Sobre resultado.registrado inválido");
+        }
+        try {
+            Instant.parse(envelope.occurredAt());
+        } catch (DateTimeParseException e) {
+            throw new IllegalArgumentException("occurredAt inválido: " + envelope.occurredAt(), e);
+        }
         ResultadoRegistradoMessage mensaje = envelope.data();
 
         validar(mensaje);
 
         log.info("Resultado recibido: partido {} (version {})", mensaje.matchId(), mensaje.version());
         resultadoProcesadoService.procesar(mensaje);
+    }
+
+    // JSON ilegible: no se arregla reintentando, va directo a la DLQ (IllegalArgumentException).
+    private ResultadoRegistradoEnvelope leer(Message message) {
+        try {
+            return rabbitObjectMapper.readValue(message.getBody(), ResultadoRegistradoEnvelope.class);
+        } catch (IOException e) {
+            throw new IllegalArgumentException("JSON de resultado.registrado ilegible", e);
+        }
     }
 
     // Validacion defensiva: evita que un campo nulo/invalido rompa los calculos de la tabla

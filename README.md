@@ -24,3 +24,9 @@ Es una proyección de solo lectura (CQRS ligero): no recibe resultados por REST 
 ## Despliegue
 
 Ver [DEPLOY.md](./DEPLOY.md): Docker, variables de entorno (`.env`), Flyway y cómo correr los tests.
+
+## Contrato de resultados
+
+Se aceptan campos adicionales del productor (nombres y ronda), se valida el sobre, el tipo y una revisión positiva, y se admite `matchDate` ISO opcional. Una corrección sustituye el snapshot del encuentro y recalcula; versiones repetidas o anteriores no se aplican.
+
+`RABBITMQ_VHOST` debe coincidir con el resto de servicios. Se conserva la cola `ranking.resultado.registrado.queue`. `RANKING_DLX_ROUTING_KEY` vacío conserva sus argumentos y binding actuales; tras inventariar/migrar el broker puede configurarse una clave exclusiva, por ejemplo `ranking.resultado.registrado.queue.dlq`. No cambiarla sobre una cola existente sin una migración que preserve mensajes. Mantener una sola instancia consumidora hasta verificar concurrencia del recálculo compartido.
